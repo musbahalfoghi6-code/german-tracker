@@ -1,0 +1,21 @@
+{
+  "name": "Stundenplan — خطة تعلم الألمانية",
+  "short_name": "Stundenplan",
+  "description": "خطة تعلم اللغة الألمانية على مدار 12 أسبوعًا مع تتبع التقدم والسلسلة المتتالية",
+  "start_url": "./German-Learning-Tracker.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "ar",
+  "background_color": "#F5F1E6",
+  "theme_color": "#1B3358",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

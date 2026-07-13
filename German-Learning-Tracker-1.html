@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stundenplan — خطة تعلم الألمانية | 12 أسبوعًا</title>
+<!-- ===================== إعدادات PWA (تطبيق ويب تقدمي) ===================== -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1B3358">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Stundenplan">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+/* ==========================================================================
+   1) المتغيرات (Design Tokens) — الوضع الفاتح والداكن
+   ========================================================================== */
+:root{
+  --bg: #F5F1E6;
+  --surface: #FFFFFF;
+  --surface-alt: #ECE4D0;
+  --text: #1A1F2E;
+  --text-muted: #63677A;
+  --primary: #1B3358;
+  --primary-ink: #0F1E33;
+  --accent: #C1443C;
+  --accent2: #E8A93B;
+  --success: #2F7D57;
+  --success-bg: #DCEEE1;
+  --border: #D9CFB3;
+  --shadow: rgba(26, 31, 46, 0.12);
+  --radius: 10px;
+  --font-display: Georgia, 'Times New Roman', 'Amiri', serif;
+  --font-body: -apple-system, 'Segoe UI', Tahoma, Geneva, Arial, sans-serif;
+  --font-mono: 'Courier New', ui-monospace, monospace;
+}
+[data-theme="dark"]{
+  --bg: #12141C;
+  --surface: #1B1E29;
+  --surface-alt: #232636;
+  --text: #ECE9DF;
+  --text-muted: #9A9DB0;
+  --primary: #7FA3D6;
+  --primary-ink: #C7D8EF;
+  --accent: #E1685C;
+  --accent2: #F0C169;
+  --success: #55B384;
+  --success-bg: #1E332A;
+  --border: #333748;
+  --shadow: rgba(0, 0, 0, 0.45);
+}
+
+/* ==========================================================================
+   2) إعادة ضبط أساسية
+   ========================================================================== */
+*{ box-sizing: border-box; margin:0; padding:0; }
+html{ scroll-behavior: smooth; }
+body{
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  transition: background .3s ease, color .3s ease;
+  padding-bottom: 40px;
+}
+button{ font-family: inherit; cursor: pointer; border:none; background:none; color: inherit; }
+h1,h2,h3{ font-family: var(--font-body); }
+.eyebrow{
+  font-family: var(--font-mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-size: .72rem;
+  color: var(--text-muted);
+  direction: ltr;
+  display:inline-block;
+}
+
+/* ==========================================================================
+   3) الهيدر
+   ========================================================================== */
+.top-bar{
+  display:flex; justify-content:space-between; align-items:center;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky; top:0; z-index: 50;
+}
+.brand{ display:flex; align-items:center; gap:10px; }
+.brand-badge{
+  width:38px; height:38px; border-radius:8px;
+  background: var(--primary); color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:1.1rem; flex-shrink:0;
+}
+.brand-text .title{ font-weight:700; font-size:1.02rem; }
+.brand-text .eyebrow{ display:block; margin-top:1px; }
+.top-actions{ display:flex; gap:8px; }
+.icon-btn{
+  width:40px; height:40px; border-radius:50%;
+  background: var(--surface-alt); font-size:1.1rem;
+  display:flex; align-items:center; justify-content:center;
+  transition: transform .15s ease, background .2s ease;
+  border: 1px solid var(--border);
+}
+.icon-btn:hover{ transform: translateY(-2px); background: var(--accent2); }
+.icon-btn:active{ transform: translateY(0); }
+
+/* ==========================================================================
+   4) قسم البطل / لوحة الإحصائيات
+   ========================================================================== */
+.hero{
+  max-width: 1080px; margin: 0 auto; padding: 28px 20px 8px;
+}
+.hero h1{
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3.4vw, 2.3rem);
+  font-weight: 700;
+  color: var(--primary);
+}
+.hero p.sub{ color: var(--text-muted); margin-top:6px; font-size:.95rem; }
+
+.stats-grid{
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 20px;
+}
+@media (max-width: 720px){
+  .stats-grid{ grid-template-columns: repeat(2, 1fr); }
+}
+.stat-card{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  position: relative;
+  overflow:hidden;
+}
+.stat-card .num{
+  font-family: var(--font-mono);
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--primary);
+  direction: ltr;
+  display:block;
+}
+.stat-card .label{ font-size: .8rem; color: var(--text-muted); margin-top: 2px; }
+.stat-card.accent .num{ color: var(--accent); }
+.stat-card.streak .num{ color: var(--accent2); }
+.stat-card.streak::after{ content:"🔥"; position:absolute; left:10px; top:10px; font-size:1.3rem; opacity:.85; }
+
+/* شريط التقدم */
+.progress-wrap{
+  margin-top: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+}
+.progress-head{
+  display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;
+}
+.progress-head .pct{
+  font-family: var(--font-mono); font-weight:700; color: var(--primary); font-size:1.1rem; direction:ltr;
+}
+.progress-track{
+  height: 14px; background: var(--surface-alt); border-radius: 8px; overflow:hidden; border:1px solid var(--border);
+}
+.progress-fill{
+  height:100%;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  width:0%;
+  transition: width .5s ease;
+  border-radius: 8px;
+}
+
+/* ==========================================================================
+   5) الشبكة الزمنية للأسابيع (Signature: Stundenplan Grid)
+   ========================================================================== */
+.timeline{
+  max-width: 1080px; margin: 26px auto 0; padding: 0 20px;
+  display:flex; flex-direction:column; gap: 10px;
+}
+.week-row{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display:flex;
+  align-items: stretch;
+  overflow:hidden;
+  transition: box-shadow .2s ease;
+}
+.week-row:hover{ box-shadow: 0 6px 18px var(--shadow); }
+.week-num{
+  flex: 0 0 78px;
+  background: var(--primary);
+  color:#fff;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:2px;
+  padding: 10px 4px;
+}
+.week-num .n{ font-family: var(--font-mono); font-size:1.5rem; font-weight:700; direction:ltr; }
+.week-num .lbl{ font-size:.62rem; letter-spacing:.08em; opacity:.85; direction:ltr; text-transform:uppercase; }
+.week-body{ flex:1; padding: 12px 14px; min-width:0; }
+.week-title{ font-weight:700; font-size: .98rem; }
+.week-sub{ color: var(--text-muted); font-size:.78rem; margin-top:2px; direction:ltr; text-align:right; font-family: var(--font-mono); }
+.days-row{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+
+.day-chip{
+  flex:1; min-width: 78px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 6px;
+  text-align:center;
+  background: var(--surface-alt);
+  position: relative;
+  transition: transform .15s ease, background .2s ease, border-color .2s ease;
+}
+.day-chip:hover{ transform: translateY(-2px); border-color: var(--primary); }
+.day-chip .type-icon{ font-size:1.1rem; display:block; }
+.day-chip .day-lbl{ font-size:.68rem; color: var(--text-muted); margin-top:2px; }
+.day-chip.optional{ border-style: dashed; }
+.day-chip.done{ background: var(--success-bg); border-color: var(--success); }
+.day-chip.done .check{
+  position:absolute; top:-6px; left:-6px;
+  width:20px; height:20px; border-radius:50%;
+  background: var(--success); color:#fff; font-size:.7rem;
+  display:flex; align-items:center; justify-content:center;
+  border: 2px solid var(--surface);
+}
+.day-chip .mark-btn{
+  margin-top:6px; width:22px; height:22px; border-radius:50%;
+  border: 2px solid var(--text-muted); background:transparent;
+  display:flex; align-items:center; justify-content:center; margin-inline:auto;
+  font-size:.75rem; color: transparent; transition:.15s ease;
+}
+.day-chip.done .mark-btn{ border-color: var(--success); background: var(--success); color:#fff; }
+
+/* ==========================================================================
+   6) النافذة المنبثقة لتفاصيل اليوم
+   ========================================================================== */
+.overlay{
+  position:fixed; inset:0; background: rgba(10,12,18,.55);
+  display:none; align-items:center; justify-content:center; z-index: 200; padding: 16px;
+  backdrop-filter: blur(2px);
+}
+.overlay.show{ display:flex; }
+.modal{
+  background: var(--surface);
+  border-radius: 14px;
+  max-width: 460px; width:100%;
+  padding: 22px;
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 50px var(--shadow);
+  max-height: 85vh; overflow-y:auto;
+  animation: pop .18s ease;
+}
+@keyframes pop{ from{ transform: scale(.94); opacity:0;} to{ transform:scale(1); opacity:1;} }
+.modal-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.modal-head .eyebrow{ margin-bottom:4px; }
+.modal h2{ font-size:1.15rem; }
+.modal .close-x{ font-size:1.3rem; color: var(--text-muted); line-height:1; flex-shrink:0; }
+.modal .duration-tag{
+  display:inline-block; margin-top:8px; font-size:.78rem;
+  background: var(--surface-alt); padding:3px 10px; border-radius:20px; color: var(--text-muted);
+}
+.task-list{ list-style:none; margin-top:16px; display:flex; flex-direction:column; gap:10px; }
+.task-list li{
+  display:flex; gap:10px; align-items:flex-start;
+  background: var(--surface-alt); padding:10px 12px; border-radius:8px; font-size:.92rem;
+}
+.modal-actions{ margin-top:20px; display:flex; gap:10px; }
+.btn{
+  flex:1; padding: 11px 14px; border-radius: 8px; font-weight:700; font-size:.9rem;
+  transition: transform .12s ease, filter .15s ease;
+  display:flex; align-items:center; justify-content:center; gap:6px;
+}
+.btn:hover{ filter:brightness(1.08); transform: translateY(-1px); }
+.btn:active{ transform: translateY(0); }
+.btn-primary{ background: var(--primary); color:#fff; }
+.btn-success{ background: var(--success); color:#fff; }
+.btn-ghost{ background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); }
+.btn-danger{ background: var(--accent); color:#fff; }
+
+/* تأكيد إعادة التعيين */
+.confirm-box p{ margin-top:8px; color: var(--text-muted); font-size:.92rem; }
+
+/* ==========================================================================
+   7) تذييل الأدوات (زر إعادة التعيين)
+   ========================================================================== */
+.footer-tools{
+  max-width: 1080px; margin: 30px auto 0; padding: 0 20px;
+  display:flex; justify-content:center;
+}
+.reset-btn{
+  color: var(--accent); font-size:.85rem; padding:10px 16px;
+  border:1px solid var(--border); border-radius:20px; display:flex; gap:6px; align-items:center;
+  background: var(--surface);
+}
+.reset-btn:hover{ background: var(--accent); color:#fff; border-color: var(--accent); }
+
+.legend{
+  max-width:1080px; margin: 18px auto 0; padding: 0 20px;
+  display:flex; gap:16px; flex-wrap:wrap; font-size:.78rem; color: var(--text-muted);
+}
+.legend span{ display:inline-flex; align-items:center; gap:5px; }
+
+@media (max-width: 560px){
+  .week-row{ flex-direction:column; }
+  .week-num{ flex-direction:row; padding:8px 12px; gap:8px; }
+  .day-chip{ min-width: 40%; }
+}
+
+/* ==========================================================================
+   8) رسائل التوست (تهنئة إنجاز الجلسة)
+   ========================================================================== */
+.toast-stack{
+  position: fixed; top: 16px; left:50%; transform: translateX(-50%);
+  z-index: 400; display:flex; flex-direction:column; gap:8px; align-items:center;
+  pointer-events:none; width:100%; padding:0 16px;
+}
+.toast{
+  background: var(--primary); color:#fff;
+  padding: 12px 20px; border-radius: 30px;
+  font-size:.9rem; font-weight:700;
+  box-shadow: 0 10px 30px var(--shadow);
+  display:flex; align-items:center; gap:8px;
+  animation: toastIn .35s cubic-bezier(.34,1.56,.64,1), toastOut .35s ease forwards;
+  animation-delay: 0s, 2.4s;
+  max-width: 420px;
+}
+.toast.celebrate{ background: linear-gradient(90deg, var(--accent2), var(--accent)); }
+@keyframes toastIn{ from{ transform: translateY(-16px); opacity:0; } to{ transform: translateY(0); opacity:1; } }
+@keyframes toastOut{ 0%,90%{ opacity:1; } 100%{ opacity:0; transform: translateY(-10px); } }
+
+/* نبضة خفيفة عند تحديث بطاقات الإحصائيات */
+@keyframes pulseUp{ 0%{ transform:scale(1); } 40%{ transform:scale(1.08); } 100%{ transform:scale(1); } }
+.stat-card.pulse .num{ animation: pulseUp .4s ease; }
+
+/* شارة تحقيق سلسلة (Streak Milestone) */
+.milestone-badge{
+  display:inline-flex; align-items:center; gap:6px;
+  background: var(--success-bg); color: var(--success);
+  border: 1px solid var(--success); border-radius: 20px;
+  padding: 4px 12px; font-size:.78rem; font-weight:700; margin-top:8px;
+}
+
+/* حركة دخول خفيفة لصفوف الأسابيع */
+.week-row{ animation: rowFade .35s ease both; }
+@keyframes rowFade{ from{ opacity:0; transform: translateY(6px); } to{ opacity:1; transform:translateY(0); } }
+
+/* حركة عند تمييز يوم كمكتمل */
+.day-chip.just-done{ animation: chipPop .35s ease; }
+@keyframes chipPop{ 0%{ transform: scale(1); } 45%{ transform: scale(1.08); } 100%{ transform: scale(1); } }
+
+/* ==========================================================================
+   9) لوحة الإحصائيات التفصيلية (Modal)
+   ========================================================================== */
+.stats-detail-grid{
+  display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:16px;
+}
+.stats-detail-item{
+  background: var(--surface-alt); border:1px solid var(--border);
+  border-radius:8px; padding:12px; text-align:center;
+}
+.stats-detail-item .val{
+  font-family: var(--font-mono); font-weight:700; font-size:1.3rem; color: var(--primary); direction:ltr; display:block;
+}
+.stats-detail-item .lbl{ font-size:.75rem; color: var(--text-muted); margin-top:2px; }
+.stats-detail-item.best .val{ color: var(--accent2); }
+.stats-detail-item.streak .val{ color: var(--accent); }
+
+/* ==========================================================================
+   10) إعدادات التذكيرات اليومية
+   ========================================================================== */
+.reminder-row{
+  display:flex; align-items:center; justify-content:space-between;
+  background: var(--surface-alt); border:1px solid var(--border);
+  border-radius:8px; padding:12px 14px; margin-top:14px;
+}
+.reminder-row label.field-label{ font-size:.88rem; font-weight:700; }
+.switch{ position:relative; display:inline-block; width:46px; height:26px; flex-shrink:0; }
+.switch input{ opacity:0; width:0; height:0; }
+.switch .slider{
+  position:absolute; inset:0; background: var(--border); border-radius:26px; transition:.2s ease;
+}
+.switch .slider::before{
+  content:""; position:absolute; width:20px; height:20px; left:3px; top:3px;
+  background:#fff; border-radius:50%; transition:.2s ease;
+}
+.switch input:checked + .slider{ background: var(--success); }
+.switch input:checked + .slider::before{ transform: translateX(-20px); } /* RTL: تتحرك لليسار */
+.time-input-wrap{ margin-top:14px; }
+.time-input-wrap label{ font-size:.85rem; color: var(--text-muted); display:block; margin-bottom:6px; }
+.time-input-wrap input[type="time"]{
+  width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border);
+  background: var(--surface); color: var(--text); font-family: var(--font-mono); font-size:1rem; direction:ltr;
+}
+.reminder-note{
+  margin-top:12px; font-size:.76rem; color: var(--text-muted);
+  background: var(--surface-alt); border-radius:8px; padding:10px 12px; line-height:1.7;
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== الهيدر ===================== -->
+<header class="top-bar">
+  <div class="brand">
+    <div class="brand-badge">DE</div>
+    <div class="brand-text">
+      <div class="title">خطة تعلّم الألمانية</div>
+      <span class="eyebrow">3-Monats-Plan · 12 Wochen</span>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button class="icon-btn" id="statsBtn" title="لوحة الإحصائيات">📊</button>
+    <button class="icon-btn" id="reminderBtn" title="إعدادات التذكير اليومي">🔔</button>
+    <button class="icon-btn" id="themeToggle" title="تبديل الوضع الداكن/الفاتح">🌙</button>
+  </div>
+</header>
+
+<!-- ===================== حاوية رسائل التوست ===================== -->
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- ===================== قسم الإحصائيات ===================== -->
+<main class="hero">
+  <h1>رحلتك نحو اللغة الألمانية 🇩🇪</h1>
+  <p class="sub">3 أيام دراسة أسبوعيًا + يوم رابع اختياري للمراجعة — تابع تقدمك أسبوعًا بأسبوع.</p>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <span class="num" id="statCompleted">0</span>
+      <span class="label">جلسات مكتملة</span>
+    </div>
+    <div class="stat-card">
+      <span class="num" id="statRemaining">48</span>
+      <span class="label">جلسات متبقية</span>
+    </div>
+    <div class="stat-card streak">
+      <span class="num" id="statStreak">0</span>
+      <span class="label">أيام متتالية 🔥</span>
+    </div>
+    <div class="stat-card accent">
+      <span class="num" id="statWeek">1</span>
+      <span class="label">الأسبوع الحالي</span>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-head">
+      <strong>نسبة الإنجاز الكلية</strong>
+      <span class="pct" id="progressPct">0%</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </div>
+</main>
+
+<!-- ===================== وسيلة الإيضاح ===================== -->
+<div class="legend">
+  <span>📖 قواعد</span>
+  <span>🗣️ مفردات</span>
+  <span>🎧 استماع ومحادثة</span>
+  <span>🔁 مراجعة (اختياري)</span>
+  <span>✅ مكتمل</span>
+</div>
+
+<!-- ===================== شبكة الأسابيع الـ12 ===================== -->
+<section class="timeline" id="timeline">
+  <!-- تُبنى الأسابيع ديناميكيًا بواسطة JavaScript -->
+</section>
+
+<!-- ===================== زر إعادة التعيين ===================== -->
+<div class="footer-tools">
+  <button class="reset-btn" id="resetBtn">🗑️ إعادة تعيين كل التقدم</button>
+</div>
+
+<!-- ===================== النافذة المنبثقة: تفاصيل اليوم ===================== -->
+<div class="overlay" id="dayOverlay">
+  <div class="modal" id="dayModal">
+    <div class="modal-head">
+      <div>
+        <span class="eyebrow" id="modalEyebrow">WOCHE 1 · TAG 1</span>
+        <h2 id="modalTitle">عنوان اليوم</h2>
+        <span class="duration-tag" id="modalDuration">⏱️ 45 دقيقة</span>
+      </div>
+      <button class="close-x" id="modalClose">✕</button>
+    </div>
+    <ul class="task-list" id="modalTasks"></ul>
+    <div class="modal-actions">
+      <button class="btn btn-success" id="modalToggleBtn">✔️ تمييز كمكتمل</button>
+      <button class="btn btn-ghost" id="modalCloseBtn">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== النافذة المنبثقة: تأكيد إعادة التعيين ===================== -->
+<div class="overlay" id="resetOverlay">
+  <div class="modal confirm-box">
+    <h2>⚠️ تأكيد إعادة التعيين</h2>
+    <p>سيتم حذف كل تقدمك المسجل في الخطة بالكامل ولا يمكن التراجع عن هذا الإجراء. هل أنت متأكد؟</p>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="confirmResetBtn">نعم، إعادة التعيين</button>
+      <button class="btn btn-ghost" id="cancelResetBtn">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== النافذة المنبثقة: لوحة الإحصائيات التفصيلية ===================== -->
+<div class="overlay" id="statsOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <span class="eyebrow">STATISTIK · نظرة شاملة</span>
+        <h2>📊 لوحة الإحصائيات</h2>
+      </div>
+      <button class="close-x" id="statsCloseX">✕</button>
+    </div>
+
+    <div class="progress-wrap" style="margin-top:14px; padding:14px 16px;">
+      <div class="progress-head">
+        <strong>نسبة الإنجاز الكلية</strong>
+        <span class="pct" id="statsPct">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="statsProgressFill"></div>
+      </div>
+    </div>
+
+    <div class="stats-detail-grid">
+      <div class="stats-detail-item">
+        <span class="val" id="statsCompleted">0</span>
+        <span class="lbl">جلسات مكتملة</span>
+      </div>
+      <div class="stats-detail-item">
+        <span class="val" id="statsRemaining">0</span>
+        <span class="lbl">جلسات متبقية</span>
+      </div>
+      <div class="stats-detail-item">
+        <span class="val" id="statsWeekDays">0</span>
+        <span class="lbl">أيام دراسة هذا الأسبوع</span>
+      </div>
+      <div class="stats-detail-item">
+        <span class="val" id="statsMonthDays">0</span>
+        <span class="lbl">أيام دراسة هذا الشهر</span>
+      </div>
+      <div class="stats-detail-item streak">
+        <span class="val" id="statsCurrentStreak">0</span>
+        <span class="lbl">Current Streak 🔥</span>
+      </div>
+      <div class="stats-detail-item best">
+        <span class="val" id="statsBestStreak">0</span>
+        <span class="lbl">Best Streak 🏆</span>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="statsCloseBtn">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== النافذة المنبثقة: إعدادات التذكير اليومي ===================== -->
+<div class="overlay" id="reminderOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <span class="eyebrow">ERINNERUNG · التذكير اليومي</span>
+        <h2>🔔 إعدادات التذكير</h2>
+      </div>
+      <button class="close-x" id="reminderCloseX">✕</button>
+    </div>
+
+    <div class="reminder-row">
+      <label class="field-label" for="reminderToggle">تفعيل التذكير اليومي</label>
+      <label class="switch">
+        <input type="checkbox" id="reminderToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="time-input-wrap">
+      <label for="reminderTime">وقت الإشعار اليومي</label>
+      <input type="time" id="reminderTime" value="18:00">
+    </div>
+
+    <p class="reminder-note">
+      ℹ️ ستصلك رسالة تذكير طالما الصفحة مفتوحة في المتصفح (أو التطبيق المثبّت). لضمان وصول إشعارات دقيقة حتى مع إغلاق المتصفح تمامًا، يلزم خادم إشعارات Push، وهو خارج نطاق هذا التطبيق الذي يعمل بالكامل من جهازك دون خادم خارجي.
+    </p>
+
+    <div class="modal-actions">
+      <button class="btn btn-success" id="reminderSaveBtn">💾 حفظ الإعدادات</button>
+      <button class="btn btn-ghost" id="reminderCloseBtn">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==========================================================================
+   1) بيانات الخطة: 12 أسبوعًا × 4 أيام (3 إلزامية + 1 اختياري للمراجعة)
+   ========================================================================== */
+const ICONS = { grammar:"📖", vocab:"🗣️", practice:"🎧", review:"🔁" };
+const TYPE_LABEL = { grammar:"قواعد", vocab:"مفردات", practice:"استماع ومحادثة", review:"مراجعة" };
+
+const weeksData = [
+{ sub:"Woche 1: Erste Schritte", title:"الانطلاقة: الأبجدية والتحية", days:[
+  {type:"grammar", title:"القواعد: الأبجدية والنطق", duration:"45 دقيقة", tasks:[
+    "🔤 تعلّم الأبجدية الألمانية الـ26 حرفًا مع النطق الصحيح",
+    "🗣️ تدرّب على نطق الحروف الخاصة ä، ö، ü، ß",
+    "✍️ اكتب اسمك وثلاث كلمات بسيطة بالألمانية"]},
+  {type:"vocab", title:"مفردات التحية والوداع", duration:"40 دقيقة", tasks:[
+    "👋 احفظ 15 عبارة تحية مثل Hallo وGuten Morgen وTschüss",
+    "📇 اصنع بطاقات تعلم (Flashcards) للعبارات الجديدة",
+    "🔁 كرّر كل عبارة بصوت عالٍ 3 مرات"]},
+  {type:"practice", title:"استماع: حوارات تعارف بسيطة", duration:"50 دقيقة", tasks:[
+    "🎧 استمع لحوار قصير بين شخصين يتبادلان التحية",
+    "🗣️ حاكِ الحوار جملة بجملة (Shadowing)",
+    "📝 اكتب 5 جمل جديدة سمعتها في الحوار"]},
+  {type:"review", title:"مراجعة الأسبوع (اختياري)", duration:"30 دقيقة", tasks:[
+    "🔁 راجع الأبجدية وعبارات التحية",
+    "🎯 اختبر نفسك في 10 كلمات بدون مساعدة",
+    "🎮 العب لعبة مطابقة الكلمات مع معانيها"]},
+]},
+{ sub:"Woche 2: Sich vorstellen & Zahlen", title:"التعارف والأرقام", days:[
+  {type:"grammar", title:"ضمائر الفاعل وفعل sein", duration:"45 دقيقة", tasks:[
+    "📖 تعلّم تصريف فعل sein في المضارع",
+    "✍️ كوّن 5 جمل باستخدام ich bin / du bist / er ist",
+    "🧩 حل تمارين تصريف الفعل"]},
+  {type:"vocab", title:"الأرقام من 0 إلى 100", duration:"40 دقيقة", tasks:[
+    "🔢 احفظ الأرقام من 0 إلى 20",
+    "🔢 تعلّم نمط تكوين الأرقام من 21 إلى 100",
+    "📞 تدرّب على نطق رقم هاتف وهمي بالألمانية"]},
+  {type:"practice", title:"حوار: Wie heißt du؟ Woher kommst du؟", duration:"50 دقيقة", tasks:[
+    "🎧 استمع لحوار تعارف كامل بين شخصين",
+    "🗣️ سجّل نفسك تقدّم نفسك بالألمانية لمدة دقيقة",
+    "👥 تدرّب مع شريك دراسة أو أمام المرآة"]},
+  {type:"review", title:"مراجعة الأسبوع (اختياري)", duration:"30 دقيقة", tasks:[
+    "🔁 راجع فعل sein والأرقام",
+    "📝 اكتب فقرة قصيرة (3-4 جمل) تعرّف بها عن نفسك",
+    "🎯 اختبار سريع للمفردات"]},
+]},
+{ sub:"Woche 3: Familie & Possessivpronomen", title:"العائلة والملكية", days:[
+  {type:"grammar", title:"ضمائر الملكية: mein, dein, sein", duration:"45 دقيقة", tasks:[
+    "📖 تعلّم ضمائر الملكية الأساسية",
+    "✍️ كوّن جملاً عن أفراد عائلتك (mein Vater, meine Mutter)",
+    "🧩 حل تمارين على ضمائر الملكية"]},
+  {type:"vocab", title:"مفردات العائلة", duration:"40 دقيقة", tasks:[
+    "👨‍👩‍👧‍👦 احفظ 20 كلمة تخص أفراد العائلة",
+    "🌳 ارسم شجرة عائلة واكتب الأسماء بالألمانية",
+    "📇 راجع البطاقات التعليمية"]},
+  {type:"practice", title:"وصف العائلة شفهيًا", duration:"50 دقيقة", tasks:[
+    "🎧 استمع لشخص يصف عائلته",
+    "🗣️ تحدث لمدة دقيقتين عن عائلتك",
+    "📝 اكتب وصفًا قصيرًا لعائلتك"]},
+  {type:"review", title:"مراجعة الأسبوع (اختياري)", duration:"30 دقيقة", tasks:[
+    "🔁 راجع ضمائر الملكية ومفردات العائلة",
+    "🎯 اختبار سريع: 15 كلمة",
+    "📝 صف صديقًا مقربًا بنفس الطريقة"]},
+]},
+{ sub:"Woche 4: Uhrzeit & Alltag", title:"الوقت والروتين اليومي", days:[
+  {type:"grammar", title:"فعل haben وترتيب الجملة", duration:"45 دقيقة", tasks:[
+    "📖 تعلّم تصريف فعل haben",
+    "✍️ كوّن جملاً عن ممتلكاتك (Ich habe...)",
+    "🧩 تمارين على ترتيب الكلمات في الجملة"]},
+  {type:"vocab", title:"قول الوقت وأيام الأسبوع", duration:"40 دقيقة", tasks:[
+    "🕐 تعلّم كيفية قول الساعة بالألمانية",
+    "📅 احفظ أيام الأسبوع والأشهر",
+    "⏰ تدرّب على كتابة جدولك اليومي"]},
+  {type:"practice", title:"وصف الروتين اليومي", duration:"50 دقيقة", tasks:[
+    "🎧 استمع لشخص يصف يومه المعتاد",
+    "🗣️ صف روتينك اليومي بصوت عالٍ",
+    "📝 اكتب فقرة عن يوم عادي في حياتك"]},
+  {type:"review", title:"مراجعة الأسبوع (اختياري)", duration:"30 دقيقة", tasks:[
+    "🔁 راجع فعل haben والوقت",
+    "🎯 اختبار سريع لأيام الأسبوع والأشهر",
+    "📝 اكتب جدولك الأسبوعي كاملًا"]},
+]},
+{ sub:"Woche 5: Essen & Einkaufen", title:"الطعام والتسوق", days:[
+  {type:"grammar", title:"صيغة الجمع للأسماء (Plural)", duration:"45 دقيقة", tasks:[
+    "📖 تعلّم قواعد جمع الأسماء الشائعة",
+    "✍️ حوّل 10 كلمات من المفرد إلى الجمع",
+    "🧩 تمارين تصنيف الجمع"]},
+  {type:"vocab", title:"الطعام والمشروبات", duration:"40 دقيقة", tasks:[
+    "🍞 احفظ أسماء 25 نوعًا من الطعام والمشروبات",
+    "🛒 تعلّم عبارات التسوق الأساسية",
+    "📇 راجع البطاقات التعليمية للمفردات"]},
+  {type:"practice", title:"محاكاة زيارة سوبرماركت", duration:"50 دقيقة", tasks:[
+    "🎧 استمع لحوار داخل متجر بقالة",
+    "🗣️ مثّل حوار الشراء بصوت عالٍ (لعب أدوار)",
+    "📝 اكتب قائمة تسوق بالألمانية"]},
+  {type:"review", title:"مراجعة الأسبوع (اختياري)", duration:"30 دقيقة", tasks:[
+    "🔁 راجع صيغ الجمع ومفردات الطعام",
+    "🎯 اختبار سريع للمفردات",
+    "📝 اكتب وصفة طعام مبسّطة بالألمانية"]},
+]},
+{ sub:"Woche 6: Wohnung & Farben", title:"المنزل والأثاث والألوان", days:[
+  {type:"grammar", title:"حروف الجر المكانية", duration:"45 دقيقة", tasks:[
+    "📖 تعلّم حروف الجر الدالة على المكان: in, auf, unter, neben",
+    "✍️ صف موقع أشياء في غرفتك",
+    "🧩 تمارين على حروف الجر"]},
+  {type:"vocab", title:"غرف المنزل والأثاث والألوان", duration:"40 دقيقة", tasks:[
+    "🛋️ احفظ أسماء غرف المنزل والأثاث",
+    "🎨 تعلّم أسماء الألوان الأساسية",
+    "📇 راجع البطاقات التعليمية"]},
+  {type:"practice", title:"وصف منزلك", duration:"50 دقيقة", tasks:[
+    "🎧 استمع لوصف شقة أو منزل",
+    "🗣️ صف منزلك أو غرفتك بالتفصيل",
+    "📝 ارسم مخطط منزلك واكتب أسماء الغرف"]},
+  {type:"review", title:"مراجعة الأسبوع (اختياري)", duration:"30 دقيقة", tasks:[
+    "🔁 راجع حروف الجر ومفردات المنزل",
+    "🎯 اختبار سريع للألوان والغرف",
+    "📝 صف منزل أحلامك"]},
+]},
+{ sub:"Woche 7: Trennbare Verben & Perfekt", title:"الأفعال المنفصلة والماضي", days:[
+  {type:"grammar", title:"الأفعال المنفصلة (trennbare Verben)", duration:"45 دقيقة", tasks:[
+    "📖 تعلّم مفهوم الأفعال المنفصلة وأمثلة شائعة",
+    "✍️ كوّن 5 جمل باستخدام أفعال منفصلة",
+    "🧩 تمارين ترتيب الجملة مع الأفعال المنفصلة"]},
+  {type:"vocab", title:"أفعال يومية وزمن Perfekt", duration:"40 دقيقة", tasks:[
+    "🏃 احفظ 20 فعلًا يوميًا شائعًا",
+    "⏳ تعلّم صيغة الماضي التام (Perfekt) الأساسية",
+    "📇 راجع البطاقات التعليمية للأفعال"]},
+  {type:"practice", title:"الحديث عن يوم أمس", duration:"50 دقيقة", tasks:[
+    "🎧 استمع لشخص يحكي عن يوم أمس",
+    "🗣️ احكِ ماذا فعلت أمس باستخدام Perfekt",
+    "📝 اكتب فقرة عن يوم أمس"]},
+  {type:"review", title:"مراجعة الأسبوع (اختياري)", duration:"30 دقيقة", tasks:[
+    "🔁 راجع الأفعال المنفصلة وPerfekt",
+    "🎯 اختبار سريع لتصريف الأفعال",
+    "📝 اكتب يومياتك لثلاثة أيام ماضية"]},
+]},
+{ sub:"Woche 8: Reisen & Wegbeschreibung", title:"السفر والاتجاهات", days:[
+  {type:"grammar", title:"حالة النصب Akkusativ الأساسية", duration:"45 دقيقة", tasks:[
+    "📖 تعلّم متى تُستخدم حالة Akkusativ",
+    "✍️ حوّل جملًا بسيطة لتستخدم Akkusativ",
+    "🧩 تمارين على أدوات التعريف في Akkusativ"]},
+  {type:"vocab", title:"وسائل النقل والاتجاهات", duration:"40 دقيقة", tasks:[
+    "🚆 احفظ أسماء وسائل النقل المختلفة",
+    "🧭 تعلّم عبارات السؤال عن الاتجاهات وإعطائها",
+    "📇 راجع البطاقات التعليمية"]},
+  {type:"practice", title:"طلب الاتجاهات في الشارع", duration:"50 دقيقة", tasks:[
+    "🎧 استمع لحوار عن السؤال عن الطريق",
+    "🗣️ تدرّب على سؤال وإعطاء اتجاهات (لعب أدوار)",
+    "📝 اكتب خطوات الوصول من منزلك لمكان قريب"]},
+  {type:"review", title:"مراجعة الأسبوع (اختياري)", duration:"30 دقيقة", tasks:[
+    "🔁 راجع Akkusativ ومفردات السفر",
+    "🎯 اختبار سريع لوسائل النقل",
+    "📝 خطط رحلة وهمية واكتب تفاصيلها"]},
+]},
+{ sub:"Woche 9: Gesundheit & Körper", title:"الصحة والجسم", days:[
+  {type:"grammar", title:"الأفعال الشرطية Modalverben", duration:"45 دقيقة", tasks:[
+    "📖 تعلّم تصريف können وmüssen وwollen",
+    "✍️ كوّن جملًا باستخدام müssen وkönnen",
+    "🧩 تمارين على ترتيب الجملة مع الأفعال الشرطية"]},
+  {type:"vocab", title:"أجزاء الجسم والأعراض الصحية", duration:"40 دقيقة", tasks:[
+    "🩺 احفظ أسماء أجزاء الجسم",
+    "🤒 تعلّم عبارات وصف الأعراض عند الطبيب",
+    "📇 راجع البطاقات التعليمية"]},
+  {type:"practice", title:"محاكاة زيارة طبيب", duration:"50 دقيقة", tasks:[
+    "🎧 استمع لحوار بين مريض وطبيب",
+    "🗣️ مثّل زيارة طبيب بلعب الأدوار",
+    "📝 اكتب حوارًا قصيرًا مع طبيب"]},
+  {type:"review", title:"مراجعة الأسبوع (اختياري)", duration:"30 دقيقة", tasks:[
+    "🔁 راجع الأفعال الشرطية ومفردات الصحة",
+    "🎯 اختبار سريع لأجزاء الجسم",
+    "📝 اكتب نصائح صحية بسيطة"]},
+]},
+{ sub:"Woche 10: Beruf & Arbeit", title:"العمل والمهن", days:[
+  {type:"grammar", title:"زمن المستقبل Futur I", duration:"45 دقيقة", tasks:[
+    "📖 تعلّم تكوين زمن المستقبل البسيط",
+    "✍️ كوّن جملًا عن خططك المستقبلية",
+    "🧩 تمارين على صيغة المستقبل"]},
+  {type:"vocab", title:"أسماء المهن ومكان العمل", duration:"40 دقيقة", tasks:[
+    "💼 احفظ أسماء 20 مهنة شائعة",
+    "🏢 تعلّم مفردات مكان العمل",
+    "📇 راجع البطاقات التعليمية"]},
+  {type:"practice", title:"التحدث عن وظيفتك أو مهنة أحلامك", duration:"50 دقيقة", tasks:[
+    "🎧 استمع لشخص يتحدث عن وظيفته",
+    "🗣️ تحدث عن عملك الحالي أو مهنة أحلامك",
+    "📝 اكتب سيرة ذاتية مصغرة بالألمانية"]},
+  {type:"review", title:"مراجعة الأسبوع (اختياري)", duration:"30 دقيقة", tasks:[
+    "🔁 راجع زمن المستقبل ومفردات المهن",
+    "🎯 اختبار سريع للمهن",
+    "📝 اكتب خطة مهنية للسنوات القادمة"]},
+]},
+{ sub:"Woche 11: Wetter & Vergleiche", title:"الطقس والفصول والمقارنة", days:[
+  {type:"grammar", title:"صيغ المقارنة والتفضيل", duration:"45 دقيقة", tasks:[
+    "📖 تعلّم قواعد تكوين المقارنة والتفضيل",
+    "✍️ قارن بين مدينتين أو فصلين",
+    "🧩 تمارين على صيغ المقارنة"]},
+  {type:"vocab", title:"الطقس والفصول", duration:"40 دقيقة", tasks:[
+    "☀️ احفظ مفردات الطقس والفصول الأربعة",
+    "🌡️ تعلّم عبارات وصف درجة الحرارة",
+    "📇 راجع البطاقات التعليمية"]},
+  {type:"practice", title:"نشرة جوية مصغرة", duration:"50 دقيقة", tasks:[
+    "🎧 استمع لنشرة جوية بسيطة بالألمانية",
+    "🗣️ قدّم نشرة جو مصغرة بنفسك",
+    "📝 اكتب فقرة عن فصلك المفضل"]},
+  {type:"review", title:"مراجعة الأسبوع (اختياري)", duration:"30 دقيقة", tasks:[
+    "🔁 راجع صيغ المقارنة ومفردات الطقس",
+    "🎯 اختبار سريع للفصول والطقس",
+    "📝 قارن بين طقس بلدك وألمانيا"]},
+]},
+{ sub:"Woche 12: Wiederholung & Abschlusstest", title:"المراجعة الشاملة والاختبار النهائي", days:[
+  {type:"grammar", title:"مراجعة القواعد الشاملة", duration:"50 دقيقة", tasks:[
+    "📖 راجع أهم القواعد: sein, haben, Modalverben",
+    "✍️ حل تمارين قواعد شاملة",
+    "🧩 اختبر نفسك في تصريف الأفعال"]},
+  {type:"vocab", title:"مراجعة المفردات الشاملة", duration:"50 دقيقة", tasks:[
+    "📚 راجع كل قوائم المفردات السابقة",
+    "📇 مرّ على جميع البطاقات التعليمية",
+    "🎯 اختبار مفردات شامل (100 كلمة)"]},
+  {type:"practice", title:"اختبار المحادثة النهائي", duration:"55 دقيقة", tasks:[
+    "🎧 استمع لحوار طويل ولخّصه",
+    "🗣️ سجّل نفسك تتحدث 3 دقائق عن نفسك وحياتك",
+    "🏆 قيّم تقدمك الكلي منذ بداية الخطة"]},
+  {type:"review", title:"الاحتفال والتخطيط للمستوى القادم", duration:"30 دقيقة", tasks:[
+    "🎉 احتفل بإنجازك! راجع كل ما تعلمته",
+    "📝 خطط للمستوى القادم A2/B1",
+    "🎯 حدد أهدافك القادمة في تعلم الألمانية"]},
+]},
+];
+
+/* ==========================================================================
+   2) إدارة الحالة والتخزين المحلي (LocalStorage)
+   ========================================================================== */
+const STORAGE_KEY = "de_learning_progress_v1";
+const THEME_KEY = "de_learning_theme_v1";
+const STREAK_KEY = "de_learning_streak_v1";      // بيانات السلسلة المتتالية وأيام الدراسة
+const REMINDER_KEY = "de_learning_reminder_v1";  // إعدادات التذكير اليومي
+
+// بنية كل يوم: "w{weekIndex}-d{dayIndex}" -> true/false
+let progress = loadProgress();
+let currentDayRef = null; // {w, d} لليوم المفتوح حاليًا في المودال
+
+function loadProgress(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  }catch(e){ return {}; }
+}
+function saveProgress(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+}
+function dayKey(w,d){ return `w${w}-d${d}`; }
+
+/* ==========================================================================
+   2ب) دوال مساعدة للتواريخ (لنظام Streak المبني على التاريخ الفعلي)
+   ========================================================================== */
+function todayStr(){
+  return dateToStr(new Date());
+}
+function dateToStr(d){
+  // تنسيق YYYY-MM-DD بالتوقيت المحلي للجهاز
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+function yesterdayStr(){
+  const d = new Date();
+  d.setDate(d.getDate()-1);
+  return dateToStr(d);
+}
+
+/* ==========================================================================
+   2ج) إدارة بيانات السلسلة المتتالية (Streak) وأيام الدراسة
+   ========================================================================== */
+function loadStreak(){
+  try{
+    const raw = localStorage.getItem(STREAK_KEY);
+    return raw ? JSON.parse(raw) : { current:0, best:0, lastDate:null, studyDates:[] };
+  }catch(e){ return { current:0, best:0, lastDate:null, studyDates:[] }; }
+}
+function saveStreak(){
+  localStorage.setItem(STREAK_KEY, JSON.stringify(streakData));
+}
+let streakData = loadStreak();
+
+// يتحقق عند كل تحميل/تحديث إن كانت السلسلة قد انقطعت بسبب فوات يوم دون إنجاز
+function checkStreakValidity(){
+  if(!streakData.lastDate) return;
+  const t = todayStr(), y = yesterdayStr();
+  if(streakData.lastDate !== t && streakData.lastDate !== y){
+    streakData.current = 0;
+    saveStreak();
+  }
+}
+
+// يُستدعى فقط عند تمييز جلسة جديدة كـ "مكتملة" (وليس عند إلغاء التمييز)
+function recordCompletionToday(){
+  const t = todayStr(), y = yesterdayStr();
+
+  // إضافة اليوم إلى سجل أيام الدراسة (لإحصائيات الأسبوع/الشهر) إن لم يكن مضافًا
+  if(!streakData.studyDates.includes(t)){
+    streakData.studyDates.push(t);
+  }
+
+  if(streakData.lastDate === t){
+    // تم إنجاز جلسة أخرى في نفس اليوم بالفعل — لا تزيد السلسلة مرتين في اليوم نفسه
+  }else if(streakData.lastDate === y){
+    streakData.current += 1;
+  }else{
+    // أول جلسة اليوم بعد انقطاع، أو أول جلسة على الإطلاق
+    streakData.current = 1;
+  }
+
+  streakData.lastDate = t;
+  streakData.best = Math.max(streakData.best, streakData.current);
+  saveStreak();
+
+  checkMilestone(streakData.current);
+}
+
+// عدد أيام الدراسة ضمن الأسبوع الحالي (الاثنين إلى الأحد) والشهر الحالي
+function countStudyDaysInRange(daysList, mode){
+  const now = new Date();
+  if(mode === "week"){
+    // تحديد بداية الأسبوع (الاثنين) لهذا التاريخ
+    const day = now.getDay(); // 0=الأحد
+    const diffToMonday = (day === 0 ? -6 : 1 - day);
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + diffToMonday);
+    monday.setHours(0,0,0,0);
+    return daysList.filter(ds => {
+      const d = new Date(ds + "T00:00:00");
+      return d >= monday && d <= now;
+    }).length;
+  }else{ // month
+    const y = now.getFullYear(), m = now.getMonth();
+    return daysList.filter(ds => {
+      const d = new Date(ds + "T00:00:00");
+      return d.getFullYear() === y && d.getMonth() === m;
+    }).length;
+  }
+}
+
+// شارات الاحتفال عند بلوغ سلسلة أيام معينة
+const STREAK_MILESTONES = [7, 14, 30, 60, 100];
+function checkMilestone(current){
+  if(STREAK_MILESTONES.includes(current)){
+    showToast(`🎉 رائع! وصلت إلى سلسلة ${current} يومًا متتاليًا!`, true);
+  }
+}
+
+/* ==========================================================================
+   2د) نظام رسائل التوست (تهنئة سريعة عند إنجاز جلسة)
+   ========================================================================== */
+const toastStack = document.getElementById("toastStack");
+function showToast(message, celebrate){
+  const el = document.createElement("div");
+  el.className = "toast" + (celebrate ? " celebrate" : "");
+  el.textContent = message;
+  toastStack.appendChild(el);
+  // إزالة عنصر التوست تلقائيًا بعد انتهاء حركة الظهور/الاختفاء
+  setTimeout(() => el.remove(), 2800);
+}
+
+/* ==========================================================================
+   3) بناء واجهة الأسابيع ديناميكيًا
+   ========================================================================== */
+const timelineEl = document.getElementById("timeline");
+
+function buildTimeline(){
+  timelineEl.innerHTML = "";
+  weeksData.forEach((week, wIdx) => {
+    const row = document.createElement("div");
+    row.className = "week-row";
+
+    row.innerHTML = `
+      <div class="week-num">
+        <span class="n">${String(wIdx+1).padStart(2,"0")}</span>
+        <span class="lbl">Woche</span>
+      </div>
+      <div class="week-body">
+        <div class="week-title">${week.title}</div>
+        <div class="week-sub">${week.sub}</div>
+        <div class="days-row" data-week="${wIdx}"></div>
+      </div>
+    `;
+    const daysRow = row.querySelector(".days-row");
+
+    week.days.forEach((day, dIdx) => {
+      const isOptional = day.type === "review";
+      const key = dayKey(wIdx, dIdx);
+      const done = !!progress[key];
+
+      const chip = document.createElement("div");
+      chip.className = "day-chip" + (isOptional ? " optional" : "") + (done ? " done" : "");
+      chip.dataset.week = wIdx;
+      chip.dataset.day = dIdx;
+
+      chip.innerHTML = `
+        ${done ? '<div class="check">✓</div>' : ""}
+        <span class="type-icon">${ICONS[day.type]}</span>
+        <span class="day-lbl">${isOptional ? "مراجعة" : "يوم " + (dIdx+1)}</span>
+        <button class="mark-btn" title="تمييز كمكتمل">✓</button>
+      `;
+
+      // فتح تفاصيل اليوم عند الضغط على البطاقة
+      chip.addEventListener("click", (e) => {
+        if(e.target.classList.contains("mark-btn")){
+          toggleDay(wIdx, dIdx);
+          e.stopPropagation();
+          return;
+        }
+        openDayModal(wIdx, dIdx);
+      });
+
+      daysRow.appendChild(chip);
+    });
+
+    timelineEl.appendChild(row);
+  });
+}
+
+/* ==========================================================================
+   4) تبديل حالة الإنجاز وتحديث الإحصائيات
+   ========================================================================== */
+function toggleDay(w, d){
+  const key = dayKey(w, d);
+  const wasDone = !!progress[key];
+  progress[key] = !wasDone;
+  saveProgress();
+
+  if(!wasDone){
+    // تم للتو تمييز الجلسة كمكتملة (وليس إلغاء تمييز)
+    recordCompletionToday();
+    showToast("✅ أحسنت! تم إنجاز الجلسة بنجاح");
+  }
+
+  refreshUI();
+
+  // حركة بصرية خفيفة على البطاقة التي تم تمييزها للتو
+  if(!wasDone){
+    const chip = document.querySelector(`.day-chip[data-week="${w}"][data-day="${d}"]`);
+    if(chip){
+      chip.classList.add("just-done");
+      setTimeout(() => chip.classList.remove("just-done"), 400);
+    }
+  }
+}
+
+function setDay(w, d, value){
+  const key = dayKey(w, d);
+  progress[key] = value;
+  saveProgress();
+  refreshUI();
+}
+
+function getAllDaysOrdered(){
+  const list = [];
+  weeksData.forEach((week, wIdx) => {
+    week.days.forEach((day, dIdx) => {
+      list.push({ w: wIdx, d: dIdx, key: dayKey(wIdx,dIdx) });
+    });
+  });
+  return list;
+}
+
+function computeStats(){
+  const all = getAllDaysOrdered();
+  const total = all.length;
+  const completed = all.filter(item => !!progress[item.key]).length;
+  const remaining = total - completed;
+  const pct = total ? Math.round((completed/total)*100) : 0;
+
+  // السلسلة المتتالية الحقيقية مبنية على تواريخ الإنجاز الفعلية (وليس على ترتيب الأيام في الخطة)
+  checkStreakValidity();
+  const streak = streakData.current;
+  const bestStreak = streakData.best;
+
+  // أيام الدراسة هذا الأسبوع (من الاثنين) وهذا الشهر
+  const weekDays = countStudyDaysInRange(streakData.studyDates, "week");
+  const monthDays = countStudyDaysInRange(streakData.studyDates, "month");
+
+  // تحديد الأسبوع الحالي: أول أسبوع يحتوي على يوم غير مكتمل
+  let currentWeek = weeksData.length;
+  for(let w=0; w<weeksData.length; w++){
+    const weekDone = weeksData[w].days.every((_, d) => !!progress[dayKey(w,d)]);
+    if(!weekDone){ currentWeek = w+1; break; }
+  }
+
+  return { total, completed, remaining, pct, streak, bestStreak, weekDays, monthDays, currentWeek };
+}
+
+function refreshUI(){
+  buildTimeline();
+  const stats = computeStats();
+  document.getElementById("statCompleted").textContent = stats.completed;
+  document.getElementById("statRemaining").textContent = stats.remaining;
+  document.getElementById("statStreak").textContent = stats.streak;
+  document.getElementById("statWeek").textContent = stats.currentWeek;
+  document.getElementById("progressPct").textContent = stats.pct + "%";
+  document.getElementById("progressFill").style.width = stats.pct + "%";
+
+  // نبضة بصرية خفيفة على بطاقة السلسلة المتتالية عند كل تحديث لجذب الانتباه للتغيّر
+  const streakCard = document.querySelector(".stat-card.streak");
+  if(streakCard){
+    streakCard.classList.add("pulse");
+    setTimeout(() => streakCard.classList.remove("pulse"), 450);
+  }
+
+  // تحديث لوحة الإحصائيات التفصيلية إن كانت مفتوحة أو عند فتحها لاحقًا
+  updateStatsOverlay(stats);
+}
+
+/* ==========================================================================
+   4ب) تحديث محتوى لوحة الإحصائيات التفصيلية
+   ========================================================================== */
+function updateStatsOverlay(stats){
+  const s = stats || computeStats();
+  document.getElementById("statsPct").textContent = s.pct + "%";
+  document.getElementById("statsProgressFill").style.width = s.pct + "%";
+  document.getElementById("statsCompleted").textContent = s.completed;
+  document.getElementById("statsRemaining").textContent = s.remaining;
+  document.getElementById("statsWeekDays").textContent = s.weekDays;
+  document.getElementById("statsMonthDays").textContent = s.monthDays;
+  document.getElementById("statsCurrentStreak").textContent = s.streak;
+  document.getElementById("statsBestStreak").textContent = s.bestStreak;
+}
+
+/* ==========================================================================
+   5) النافذة المنبثقة لتفاصيل اليوم
+   ========================================================================== */
+const dayOverlay = document.getElementById("dayOverlay");
+const modalTitle = document.getElementById("modalTitle");
+const modalEyebrow = document.getElementById("modalEyebrow");
+const modalDuration = document.getElementById("modalDuration");
+const modalTasks = document.getElementById("modalTasks");
+const modalToggleBtn = document.getElementById("modalToggleBtn");
+
+function openDayModal(w, d){
+  currentDayRef = { w, d };
+  const week = weeksData[w];
+  const day = week.days[d];
+  const isOptional = day.type === "review";
+  const done = !!progress[dayKey(w,d)];
+
+  modalEyebrow.textContent = `WOCHE ${w+1} · TAG ${d+1} · ${TYPE_LABEL[day.type].toUpperCase()}`;
+  modalTitle.textContent = `${ICONS[day.type]} ${day.title}` + (isOptional ? " (اختياري)" : "");
+  modalDuration.textContent = `⏱️ ${day.duration}`;
+
+  modalTasks.innerHTML = "";
+  day.tasks.forEach(t => {
+    const li = document.createElement("li");
+    li.textContent = t;
+    modalTasks.appendChild(li);
+  });
+
+  modalToggleBtn.textContent = done ? "↩️ إلغاء التمييز" : "✔️ تمييز كمكتمل";
+  modalToggleBtn.className = "btn " + (done ? "btn-ghost" : "btn-success");
+
+  dayOverlay.classList.add("show");
+}
+
+function closeDayModal(){
+  dayOverlay.classList.remove("show");
+  currentDayRef = null;
+}
+
+document.getElementById("modalClose").addEventListener("click", closeDayModal);
+document.getElementById("modalCloseBtn").addEventListener("click", closeDayModal);
+dayOverlay.addEventListener("click", (e) => { if(e.target === dayOverlay) closeDayModal(); });
+
+modalToggleBtn.addEventListener("click", () => {
+  if(!currentDayRef) return;
+  toggleDay(currentDayRef.w, currentDayRef.d);
+  openDayModal(currentDayRef.w, currentDayRef.d); // تحديث محتوى المودال بعد التبديل
+});
+
+/* ==========================================================================
+   6) إعادة تعيين التقدم (مع تأكيد)
+   ========================================================================== */
+const resetOverlay = document.getElementById("resetOverlay");
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  resetOverlay.classList.add("show");
+});
+document.getElementById("cancelResetBtn").addEventListener("click", () => {
+  resetOverlay.classList.remove("show");
+});
+resetOverlay.addEventListener("click", (e) => { if(e.target === resetOverlay) resetOverlay.classList.remove("show"); });
+
+document.getElementById("confirmResetBtn").addEventListener("click", () => {
+  progress = {};
+  saveProgress();
+
+  // إعادة تعيين بيانات السلسلة المتتالية وأيام الدراسة أيضًا (جزء من "كل التقدم")
+  streakData = { current:0, best:0, lastDate:null, studyDates:[] };
+  saveStreak();
+
+  refreshUI();
+  resetOverlay.classList.remove("show");
+  showToast("🗑️ تم إعادة تعيين كل التقدم بنجاح");
+});
+
+/* ==========================================================================
+   6ب) لوحة الإحصائيات التفصيلية (فتح/إغلاق)
+   ========================================================================== */
+const statsOverlay = document.getElementById("statsOverlay");
+function openStatsModal(){
+  updateStatsOverlay();
+  statsOverlay.classList.add("show");
+}
+function closeStatsModal(){ statsOverlay.classList.remove("show"); }
+
+document.getElementById("statsBtn").addEventListener("click", openStatsModal);
+document.getElementById("statsCloseX").addEventListener("click", closeStatsModal);
+document.getElementById("statsCloseBtn").addEventListener("click", closeStatsModal);
+statsOverlay.addEventListener("click", (e) => { if(e.target === statsOverlay) closeStatsModal(); });
+
+/* ==========================================================================
+   6ج) إعدادات التذكير اليومي + الإشعارات
+   ========================================================================== */
+function loadReminder(){
+  try{
+    const raw = localStorage.getItem(REMINDER_KEY);
+    return raw ? JSON.parse(raw) : { enabled:false, time:"18:00", lastNotifiedDate:null };
+  }catch(e){ return { enabled:false, time:"18:00", lastNotifiedDate:null }; }
+}
+function saveReminder(){ localStorage.setItem(REMINDER_KEY, JSON.stringify(reminderData)); }
+let reminderData = loadReminder();
+
+const reminderOverlay = document.getElementById("reminderOverlay");
+const reminderToggle = document.getElementById("reminderToggle");
+const reminderTimeInput = document.getElementById("reminderTime");
+
+function openReminderModal(){
+  reminderToggle.checked = !!reminderData.enabled;
+  reminderTimeInput.value = reminderData.time || "18:00";
+  reminderOverlay.classList.add("show");
+}
+function closeReminderModal(){ reminderOverlay.classList.remove("show"); }
+
+document.getElementById("reminderBtn").addEventListener("click", openReminderModal);
+document.getElementById("reminderCloseX").addEventListener("click", closeReminderModal);
+document.getElementById("reminderCloseBtn").addEventListener("click", closeReminderModal);
+reminderOverlay.addEventListener("click", (e) => { if(e.target === reminderOverlay) closeReminderModal(); });
+
+document.getElementById("reminderSaveBtn").addEventListener("click", async () => {
+  const wantsEnabled = reminderToggle.checked;
+
+  if(wantsEnabled && "Notification" in window){
+    // طلب إذن الإشعارات من المتصفح عند التفعيل
+    let permission = Notification.permission;
+    if(permission === "default"){
+      permission = await Notification.requestPermission();
+    }
+    if(permission !== "granted"){
+      showToast("⚠️ لم يتم منح إذن الإشعارات من المتصفح");
+      reminderData.enabled = false;
+      reminderToggle.checked = false;
+      saveReminder();
+      return;
+    }
+  }
+
+  reminderData.enabled = wantsEnabled && ("Notification" in window);
+  reminderData.time = reminderTimeInput.value || "18:00";
+  saveReminder();
+  showToast(reminderData.enabled ? "🔔 تم تفعيل التذكير اليومي" : "🔕 تم تعطيل التذكير اليومي");
+  closeReminderModal();
+});
+
+// إرسال إشعار عبر Service Worker إن كان مسجّلًا، وإلا عبر Notification API مباشرة
+function fireReminderNotification(){
+  const title = "⏰ حان وقت التعلّم!";
+  const options = {
+    body: "لا تفوّت جلسة اليوم في خطة تعلّم الألمانية 🇩🇪",
+    icon: "icon.svg",
+    tag: "de-learning-reminder"
+  };
+  if(navigator.serviceWorker && navigator.serviceWorker.ready){
+    navigator.serviceWorker.ready.then(reg => reg.showNotification(title, options))
+      .catch(() => new Notification(title, options));
+  }else if("Notification" in window && Notification.permission === "granted"){
+    new Notification(title, options);
+  }
+}
+
+// تفحّص كل 30 ثانية إن كان الوقت الحالي يطابق وقت التذكير المحدد (طالما الصفحة مفتوحة)
+function checkReminderTick(){
+  if(!reminderData.enabled) return;
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,"0");
+  const mm = String(now.getMinutes()).padStart(2,"0");
+  const nowHM = `${hh}:${mm}`;
+  const today = todayStr();
+
+  if(nowHM === reminderData.time && reminderData.lastNotifiedDate !== today){
+    fireReminderNotification();
+    reminderData.lastNotifiedDate = today;
+    saveReminder();
+  }
+}
+setInterval(checkReminderTick, 30000);
+
+/* ==========================================================================
+   7) تبديل الوضع الفاتح/الداكن
+   ========================================================================== */
+const themeToggleBtn = document.getElementById("themeToggle");
+
+function applyTheme(theme){
+  if(theme === "dark"){
+    document.documentElement.setAttribute("data-theme", "dark");
+    themeToggleBtn.textContent = "☀️";
+  }else{
+    document.documentElement.removeAttribute("data-theme");
+    themeToggleBtn.textContent = "🌙";
+  }
+  localStorage.setItem(THEME_KEY, theme);
+}
+
+themeToggleBtn.addEventListener("click", () => {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  applyTheme(isDark ? "light" : "dark");
+});
+
+/* ==========================================================================
+   8) التهيئة الأولية عند تحميل الصفحة
+   ========================================================================== */
+(function init(){
+  // استرجاع الوضع المحفوظ (فاتح/داكن)
+  const savedTheme = localStorage.getItem(THEME_KEY) ||
+    (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  applyTheme(savedTheme);
+
+  // التحقق من صحة السلسلة المتتالية عند فتح التطبيق (في حال مرّ يوم دون إنجاز)
+  checkStreakValidity();
+
+  // بناء الواجهة وعرض الإحصائيات
+  refreshUI();
+})();
+
+/* ==========================================================================
+   9) تسجيل Service Worker لدعم PWA (عمل دون اتصال + عرض إشعارات)
+   ملاحظة: يعمل هذا فقط عند تقديم الملفات عبر خادم https أو localhost،
+   ولن يعمل عند فتح الملف مباشرة من الجهاز (file://) بسبب قيود المتصفحات.
+   ========================================================================== */
+if("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")){
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(err => {
+      console.warn("تعذّر تسجيل Service Worker:", err);
+    });
+  });
+}
+</script>
+</body>
+</html>
