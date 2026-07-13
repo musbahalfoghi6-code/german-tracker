@@ -9,9 +9,11 @@
 
 const CACHE_NAME = "de-learning-cache-v1";
 const CORE_ASSETS = [
-  "./German-Learning-Tracker.html",
+  "./index.html",
   "./manifest.json",
-  "./icon.svg"
+  "./icon.svg",
+  "./icon-192.png",
+  "./icon-512.png"
 ];
 
 // عند التثبيت: تخزين الملفات الأساسية في الكاش
@@ -44,9 +46,9 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   event.waitUntil(
     self.clients.matchAll({ type: "window" }).then((clientsArr) => {
-      const existing = clientsArr.find((c) => c.url.includes("German-Learning-Tracker.html"));
+      const existing = clientsArr.find((c) => c.url.includes("index.html") || c.url.endsWith("/"));
       if (existing) return existing.focus();
-      return self.clients.openWindow("./German-Learning-Tracker.html");
+      return self.clients.openWindow("./index.html");
     })
   );
 });
